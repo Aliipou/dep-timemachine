@@ -2,9 +2,12 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 import tempfile
 from dataclasses import dataclass
 from pathlib import Path
+
+logger = logging.getLogger(__name__)
 
 from git import InvalidGitRepositoryError, Repo
 
@@ -55,10 +58,10 @@ def _blobs_for_dep_files(commit) -> dict[str, bytes]:
             if item.type == "blob" and item.name.lower() in _DEP_FILES:
                 try:
                     blobs[item.name.lower()] = item.data_stream.read()
-                except Exception:
-                    pass
-    except Exception:
-        pass
+                except Exception as exc:
+                    logger.debug("skipping blob %s: %s", item.name, exc)
+    except Exception as exc:
+        logger.debug("skipping commit tree %s: %s", commit.hexsha[:12], exc)
     return blobs
 
 
@@ -71,8 +74,8 @@ def _parse_commit(commit) -> CommitSnapshot:
             p.write_bytes(content)
             try:
                 deps.extend(parse_file(p))
-            except Exception:
-                pass
+            except Exception as exc:
+                logger.debug("skipping %s: %s", filename, exc)
     return CommitSnapshot(
         sha=commit.hexsha[:12],
         author=str(commit.author),

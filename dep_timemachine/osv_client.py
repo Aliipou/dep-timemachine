@@ -2,8 +2,11 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 from dataclasses import dataclass, field
 from typing import Any
+
+logger = logging.getLogger(__name__)
 
 import httpx
 
@@ -83,7 +86,8 @@ class Vulnerability:
                         severity = "MEDIUM"
                     else:
                         severity = "LOW"
-                except Exception:
+                except Exception as exc:
+                    logger.warning("unexpected error in CVSS parsing: %s", exc)
                     severity = "UNKNOWN"
                 break
 
@@ -123,7 +127,8 @@ async def query_package(
         return [Vulnerability.from_osv(v) for v in data.get("vulns", [])]
     except httpx.HTTPStatusError:
         return []
-    except Exception:
+    except Exception as exc:
+        logger.warning("unexpected error in query_package(%s/%s): %s", ecosystem, name, exc)
         return []
 
 
